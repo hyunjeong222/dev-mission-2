@@ -32,4 +32,4 @@ logging:
     org.springframework.transaction.interceptor: TRACE
 jwt:
   secret: ${JWT_SECRET:}
-  access-token-expiration-ms: 3600000
+  access-token-expiration-ms: 1800000
