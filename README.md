@@ -120,6 +120,68 @@ cp .env.example .env   # JWT_SECRET 값을 32자 이상 임의 문자열로 채�
 
 삭제 시 해당 글에 달린 댓글도 함께 삭제합니다(`CommentRepository.deleteByPostId`).
 
+### 댓글 작성 — `POST /api/v1/posts/{postId}/comments`
+인증 필요
+
+요청
+```json
+{ "content": "좋은 글이네요" }
+```
+
+응답 `201 Created`
+```json
+{
+  "id": 1,
+  "postId": 1,
+  "content": "좋은 글이네요",
+  "authorId": 2,
+  "authorNickname": "유저2",
+  "createDate": "2026-09-25T21:20:00",
+  "modifyDate": "2026-09-25T21:20:00"
+}
+```
+
+실패: 토큰 없음 → `401`, 존재하지 않는 글 → `404`
+
+### 댓글 목록 조회 — `GET /api/v1/posts/{postId}/comments`
+인증 불필요
+
+응답 `200 OK`
+```json
+[
+  {
+    "id": 1,
+    "postId": 1,
+    "content": "좋은 글이네요",
+    "authorId": 2,
+    "authorNickname": "유저2",
+    "createDate": "2026-09-25T21:20:00",
+    "modifyDate": "2026-09-25T21:20:00"
+  }
+]
+```
+글에 달린 댓글이 작성 순서(오래된 순)로 배열째 반환됩니다.
+
+실패: 존재하지 않는 글 → `404`
+
+### 댓글 수정 — `PUT /api/v1/posts/{postId}/comments/{commentId}`
+인증 필요 (작성자 본인만)
+
+요청
+```json
+{ "content": "수정된 댓글" }
+```
+
+응답 `200 OK`: 댓글 작성 응답과 같은 모양 (`modifyDate` 갱신)
+
+실패: 토큰 없음 → `401`, 작성자 아님 → `403`, 존재하지 않는 댓글이거나 해당 글의 댓글이 아님 → `404`
+
+### 댓글 삭제 — `DELETE /api/v1/posts/{postId}/comments/{commentId}`
+인증 필요 (작성자 본인만)
+
+응답: `204 No Content`
+
+실패: 토큰 없음 → `401`, 작성자 아님 → `403`, 존재하지 않는 댓글이거나 해당 글의 댓글이 아님 → `404`
 
 ### 오류 응답 모양 (모든 오류 동일)
 ```json
@@ -153,12 +215,51 @@ Optional<Post> findWithAuthorById(Long id);
 
 ```sql
 select p1_0.id, p1_0.author_id, a1_0.id, a1_0.email, a1_0.nickname, ...
-from posts p1_0
-join members a1_0 on a1_0.id = p1_0.author_id
+    from posts p1_0
+    join members a1_0 on a1_0.id = p1_0.author_id
 order by p1_0.id desc
 offset ? rows fetch first ? rows only
 ```
 
 글 개수를 늘려도 이 쿼리 수는 그대로 유지되므로(N+1 아님), 작성자 조회에 대해서는 N+1이 발생하지 않습니다.
 
-> 댓글 수 집계는 컬렉션 페치 조인을 페이징과 함께 쓰면 메모리 페이징 문제가 생기기 때문에, `Comment` 쪽에 `post_id IN (...) GROUP BY` 형태의 별도 집계 쿼리로 분리할 예정입니다. (댓글 API 구현 예정)
+댓글 수는 페치 조인으로 해결하지 않았습니다. `Post`가 `List<Comment>`를 컬렉션으로 들고 있지 않을뿐더러, 컬렉션을 페치 조인하면서 페이징을 같이 쓰면 DB가 아닌 애플리케이션 메모리에서 페이징이 이뤄지는 문제가 생기기 때문입니다. 대신 `IN` + `GROUP BY` 집계 쿼리를 별도로 분리했습니다.
+
+```java
+@Query("select c.post.id as postId, count(c) as cnt from Comment c where c.post.id in :postIds group by c.post.id")
+List<PostCommentCount> countByPostIdIn(@Param("postIds") List<Long> postIds);
+```
+
+```java
+Page<Post> posts = postRepository.findAll(pageable);                       // 쿼리 1: 글 + 작성자
+List<Long> postIds = posts.getContent().stream().map(Post::getId).toList();
+Map<Long, Long> commentCountByPostId = commentRepository.countByPostIdIn(postIds).stream()
+        .collect(Collectors.toMap(PostCommentCount::getPostId, PostCommentCount::getCnt));  // 쿼리 2: 댓글 수 집계
+```
+
+글이 몇 개든, 페이지에 몇 건이 담기든 **쿼리는 항상 2개**(글 목록 1 + 댓글 수 집계 1)로 고정됩니다. 글 5개, 10개로 늘려가며 콘솔 로그의 `[Hibernate]` 쿼리 개수가 그대로인 것을 확인했습니다.
+
+## 댓글이 달린 글을 지울 때: 함께 삭제
+
+글을 지울 때 그 글에 달린 댓글은 **함께 삭제**하는 정책으로 구현했습니다. "삭제 표시"(soft delete) 대신 물리 삭제를 택한 이유는 다음과 같습니다.
+
+- `comments.post_id`가 `posts.id`를 참조하는 외래 키라서, 댓글을 먼저 지우지 않고 글만 지우면 FK 제약 위반으로 `500`이 납니다.
+- 삭제된 글은 상세/목록 조회 어디서도 다시 노출되지 않으므로, 그 글의 댓글만 "삭제됨" 표시로 남겨둘 실익이 없습니다. 오히려 고아 데이터(부모 없는 댓글)를 남기지 않는 편이 데이터 정합성 관리가 단순합니다.
+
+```java
+@Transactional
+public void delete(Long memberId, Long postId) {
+    Post post = findPost(postId);
+    checkOwner(post, memberId);
+    commentRepository.deleteByPostId(postId); // 댓글 먼저 지워야 FK 오류(500)가 나지 않습니다.
+    postRepository.delete(post);
+}
+```
+
+```java
+@Modifying
+@Query("delete from Comment c where c.post.id = :postId")
+void deleteByPostId(@Param("postId") Long postId);
+```
+
+댓글을 하나씩 조회해서 지우면(`findByPostId` 후 반복 삭제) 댓글 수만큼 삭제 쿼리가 나가 N+1이 됩니다. `deleteByPostId`는 `post_id` 조건으로 한 번에 지우는 벌크 삭제라 댓글 수와 무관하게 삭제 쿼리 1번으로 끝납니다.
