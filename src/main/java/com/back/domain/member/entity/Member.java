@@ -1,4 +1,4 @@
-package com.back.entity;
+package com.back.domain.member.entity;
 
 import com.back.jpa.entity.BaseIdAndTime;
 import jakarta.persistence.*;

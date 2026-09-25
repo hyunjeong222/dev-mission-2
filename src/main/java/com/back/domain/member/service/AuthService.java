@@ -1,7 +1,7 @@
 package com.back.domain.member.service;
 
 import com.back.domain.member.repository.MemberRepository;
-import com.back.entity.Member;
+import com.back.domain.member.entity.Member;
 import com.back.global.exception.DomainException;
 import com.back.global.exception.ErrorCode;
 import com.back.global.security.JwtProvider;
