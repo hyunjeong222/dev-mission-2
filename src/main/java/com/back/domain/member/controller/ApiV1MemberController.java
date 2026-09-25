@@ -22,6 +22,7 @@ public class ApiV1MemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(MemberResponse.from(member));
     }
 
+    // JWT 인증 동작 확인
     @GetMapping("/me")
     public MemberResponse me(@AuthenticationPrincipal Long memberId) {
         return MemberResponse.from(memberService.getAuthenticated(memberId));

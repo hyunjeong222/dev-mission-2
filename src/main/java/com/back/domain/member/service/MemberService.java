@@ -10,8 +10,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -36,7 +34,7 @@ public class MemberService {
         }
     }
 
-    /** 토큰의 회원 id 로 현재 회원을 찾습니다. 없으면 인증이 무효한 것이므로 401. */
+    // 토큰의 회원 id 로 현재 회원을 찾음. 없으면 인증이 무효한 것이므로 401
     public Member getAuthenticated(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new DomainException(ErrorCode.UNAUTHORIZED));

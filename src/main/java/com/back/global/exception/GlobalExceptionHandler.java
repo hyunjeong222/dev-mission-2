@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
         return build(ErrorCode.INVALID_INPUT, List.of());
     }
 
-    // 마지막 방어선: 예상 못 한 예외도 같은 모양으로 응답하고, 원인은 로그에만 남깁니다.
+    // 원인은 로그에 남김
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
         log.error("예상하지 못한 오류", e);

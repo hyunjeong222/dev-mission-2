@@ -20,7 +20,7 @@ public class JwtProvider {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration-ms}") long accessTokenExpirationMs
     ) {
-        // 키가 비어 있으면 서버가 뜨지 않게 해서 "서명 키 없이 실행되는 사고"를 막습니다.
+        // 키가 비어 있으면 서버가 뜨지 않게
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException(
                     "JWT_SECRET 은 32바이트 이상이어야 합니다. .env.example 을 .env 로 복사해 값을 채우세요.");
@@ -39,7 +39,7 @@ public class JwtProvider {
                 .compact();
     }
 
-    /** 유효한 토큰이면 회원 id, 아니면(만료·위조·형식 오류) 빈 값 */
+    // 유효한 토큰이면 회원 id, 아니면(만료·위조·형식 오류) 빈 값
     public Optional<Long> parseMemberId(String token) {
         try {
             String subject = Jwts.parser().verifyWith(key).build()

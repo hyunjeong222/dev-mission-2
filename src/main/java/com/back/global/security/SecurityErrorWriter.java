@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
-// 필터 단계의 오류는 @RestControllerAdvice 가 잡지 못하므로, 같은 모양의 JSON 을 직접 씁니다.
+// 필터 단계의 오류는 @RestControllerAdvice 가 잡지 못하므로, 같은 모양의 JSON 을 직접 사용
 final class SecurityErrorWriter {
     private SecurityErrorWriter() {}
 

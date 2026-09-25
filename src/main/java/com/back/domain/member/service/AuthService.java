@@ -19,7 +19,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
 
     public String login(String email, String password) {
-        // 이메일이 없는 경우와 비밀번호가 틀린 경우를 같은 응답으로 처리해 가입 여부가 드러나지 않게 합니다.
+        // 이메일이 없는 경우와 비밀번호가 틀린 경우를 같은 응답으로 처리해 가입 여부가 드러나지 않게 함
         Member member = memberRepository.findByEmail(MemberService.normalize(email))
                 .filter(m -> passwordEncoder.matches(password, m.getPassword()))
                 .orElseThrow(() -> new DomainException(ErrorCode.INVALID_CREDENTIALS));
