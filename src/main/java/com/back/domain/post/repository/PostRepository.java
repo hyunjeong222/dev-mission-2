@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
-    // 작성자를 한 번에 가져와 목록 조회 시 N+1 을 막기
+    // author 를 함께 JOIN 해서 가져와, 글마다 작성자를 따로 조회하는 N+1 을 막기
     @EntityGraph(attributePaths = "author")
     Page<Post> findAll(Pageable pageable);
 

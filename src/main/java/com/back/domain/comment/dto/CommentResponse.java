@@ -1,13 +1,21 @@
 package com.back.domain.comment.dto;
-/**
- * 문제 이름(난이도) : ()
- * 시간 : ms
- * 메모리 : KB
- * 링크 :
- * */
- 
- public class CommentResponse {
-    public static void main(String[] args) {
-        
+
+import com.back.domain.comment.entity.Comment;
+
+import java.time.LocalDateTime;
+
+public record CommentResponse(
+        Long id,
+        Long postId,
+        String content,
+        Long authorId,
+        String authorNickname,
+        LocalDateTime createDate,
+        LocalDateTime modifyDate
+) {
+    public static CommentResponse from(Comment c) {
+        return new CommentResponse(c.getId(), c.getPost().getId(), c.getContent(),
+                c.getAuthor().getId(), c.getAuthor().getNickname(),
+                c.getCreateDate(), c.getModifyDate());
     }
 }

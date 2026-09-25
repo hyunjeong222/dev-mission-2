@@ -10,12 +10,13 @@ public record PostResponse(
         String content,
         Long authorId,
         String authorNickname,
+        long commentCount,
         LocalDateTime createDate,
         LocalDateTime modifyDate
 ) {
-    public static PostResponse from(Post p) {
+    public static PostResponse of(Post p, long commentCount) {
         return new PostResponse(p.getId(), p.getTitle(), p.getContent(),
                 p.getAuthor().getId(), p.getAuthor().getNickname(),
-                p.getCreateDate(), p.getModifyDate());
+                commentCount, p.getCreateDate(), p.getModifyDate());
     }
 }

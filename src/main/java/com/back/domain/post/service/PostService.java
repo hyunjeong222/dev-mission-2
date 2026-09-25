@@ -10,10 +10,15 @@ import com.back.domain.post.repository.PostRepository;
 import com.back.global.exception.DomainException;
 import com.back.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,23 +30,35 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final MemberService memberService;
 
+    // 목록: 글 목록(+작성자) 쿼리 1번 + 댓글 수 집계 쿼리 1번, 총 2번 고정 (N+1 아님)
     public PageResponse<PostResponse> list(int page, int size) {
         var pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
                 Sort.by(Sort.Direction.DESC, "id"));
-        return PageResponse.of(postRepository.findAll(pageable), PostResponse::from);
+
+        Page<Post> posts = postRepository.findAll(pageable);
+
+        List<Long> postIds = posts.getContent().stream().map(Post::getId).toList();
+        Map<Long, Long> commentCountByPostId = commentRepository.countByPostIdIn(postIds).stream()
+                .collect(Collectors.toMap(
+                        CommentRepository.PostCommentCount::getPostId,
+                        CommentRepository.PostCommentCount::getCnt));
+
+        return PageResponse.of(posts,
+                p -> PostResponse.of(p, commentCountByPostId.getOrDefault(p.getId(), 0L)));
     }
 
     public PostResponse get(Long postId) {
-        return PostResponse.from(findPost(postId));
+        Post post = findPost(postId);
+        return PostResponse.of(post, commentRepository.countByPostId(postId));
     }
 
     @Transactional
     public PostResponse create(Long memberId, PostRequest req) {
         var author = memberService.getAuthenticated(memberId);
         Post post = postRepository.save(new Post(author, req.title().trim(), req.content()));
-        return PostResponse.from(post);
+        return PostResponse.of(post, 0L); // 방금 작성한 글이라 댓글이 있을 수 없음
     }
 
     @Transactional
@@ -49,7 +66,7 @@ public class PostService {
         Post post = findPost(postId);
         checkOwner(post, memberId);
         post.update(req.title().trim(), req.content());
-        return PostResponse.from(post);
+        return PostResponse.of(post, commentRepository.countByPostId(postId));
     }
 
     @Transactional

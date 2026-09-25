@@ -1,13 +1,10 @@
 package com.back.domain.comment.dto;
-/**
- * 문제 이름(난이도) : ()
- * 시간 : ms
- * 메모리 : KB
- * 링크 :
- * */
- 
- public class CommentRequest {
-    public static void main(String[] args) {
-        
-    }
-}
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CommentRequest(
+        @NotBlank(message = "댓글 내용은 필수입니다.")
+        @Size(max = 1000, message = "댓글은 1000자 이하여야 합니다.")
+        String content
+) {}
