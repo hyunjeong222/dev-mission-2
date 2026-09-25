@@ -199,7 +199,7 @@ cp .env.example .env   # JWT_SECRET 값을 32자 이상 임의 문자열로 채�
 ### 로그인 방식: JWT
 서버가 상태를 갖지 않는 REST API라 세션 대신 JWT를 선택했습니다. `Authorization: Bearer` 헤더로 토큰을 받고 STATELESS로 운영하며, 서버를 여러 대로 늘려도 세션 공유 문제가 없습니다. 대신 발급한 토큰을 서버에서 즉시 폐기할 수 없어 만료를 30분으로 짧게 잡았고, Refresh Token은 이번 범위에서 제외했습니다.
 
-## N+1 문제 해결
+### N+1 문제 해결
 
 글 목록을 가져올 때, `Post`가 `Member`를 `@ManyToOne(fetch = LAZY)`로 참조하고 있어서 아무 처리 없이 `findAll()`만 쓰면 글마다 작성자를 조회하는 쿼리가 추가로 나갑니다(글이 N개면 작성자 조회도 N번 — N+1).
 
@@ -239,7 +239,7 @@ Map<Long, Long> commentCountByPostId = commentRepository.countByPostIdIn(postIds
 
 글이 몇 개든, 페이지에 몇 건이 담기든 **쿼리는 항상 2개**(글 목록 1 + 댓글 수 집계 1)로 고정됩니다. 글 5개, 10개로 늘려가며 콘솔 로그의 `[Hibernate]` 쿼리 개수가 그대로인 것을 확인했습니다.
 
-## 댓글이 달린 글을 지울 때: 함께 삭제
+### 댓글이 달린 글을 지울 때: 함께 삭제
 
 글을 지울 때 그 글에 달린 댓글은 **함께 삭제**하는 정책으로 구현했습니다. "삭제 표시"(soft delete) 대신 물리 삭제를 택한 이유는 다음과 같습니다.
 
